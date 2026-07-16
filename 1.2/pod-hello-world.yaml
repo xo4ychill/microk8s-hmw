@@ -1,0 +1,21 @@
+# Задание 1: Pod с именем hello-world.
+# Разворачивает одиночный под с тестовым HTTP-сервером echoserver,
+# который в ответ на любой запрос возвращает эхо: метод, путь,
+# заголовки и тело запроса. Используется, чтобы убедиться, что
+# под запускается и до него можно достучаться напрямую (без Service)
+# через kubectl port-forward pod/hello-world.
+apiVersion: v1
+kind: Pod                # создаём "голый" Pod
+
+metadata:
+  name: hello-world       # имя пода
+  labels:
+    app: hello-world       # метка на будущее
+spec:
+  containers:
+    - name: echoserver              # имя контейнера внутри пода
+      image: gcr.io/kubernetes-e2e-test-images/echoserver:2.2
+                                     # тестовый образ, заданный условием
+      ports:
+        - containerPort: 8080        # порт, на котором echoserver слушает
+                                     # внутри контейнера

@@ -1,0 +1,23 @@
+# Задание 2 (часть 1): Pod с именем web.
+# Тот же тестовый образ echoserver, что и в Задании 1, но этот под
+# не будет опрашиваться напрямую — к нему подключается Service
+# svc (см. service-svc.yaml). Ключевая деталь —
+# label "app: web", по которой Service находит этот под
+# через свой selector.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web                   # имя пода
+  labels:
+    app: web                  # метка должна дословно совпадать
+                              # с selector.app в service-svc.yaml —
+                              # именно по ней Service находит под
+                              # и добавляет его IP в свои Endpoints
+spec:
+  containers:
+    - name: echoserver
+      image: gcr.io/kubernetes-e2e-test-images/echoserver:2.2
+      ports:
+        - containerPort: 8080    # порт контейнера; в Service он указан
+                                 # как targetPort — именно сюда Service
+                                 # будет перенаправлять трафик

@@ -1,0 +1,27 @@
+# Задание 2 (часть 2): Service с именем svc.
+# Подключается к поду web через selector/labels и даёт
+# стабильную точку доступа внутри кластера (ClusterIP), не зависящую
+# от IP конкретного пода. Проверяется через:
+#   kubectl port-forward service/svc 8081:80
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc        # имя сервиса
+spec:
+  selector:
+    app: web                  # ДОЛЖНО совпадать с labels.app в
+                              # pod-web.yaml — это механизм,
+                              # которым Service находит
+                              # нужные поды (без явной привязки к имени)
+  ports:
+    - protocol: TCP
+      port: 80                 # порт, на котором Service доступен
+                               # ВНУТРИ кластера (и через который мы
+                               # делаем port-forward на локальную машину)
+      targetPort: 8080         # порт КОНТЕЙНЕРА, куда Service
+                               # перенаправляет входящий трафик —
+                               # должен совпадать с containerPort
+                               # в манифесте пода
+  type: ClusterIP              # сервис виден только внутри кластера;
+                               # для внешнего доступа используем
+                               # kubectl port-forward
