@@ -89,8 +89,7 @@ kubectl exec -it test-client -- sh
 curl multitool-app-service:9001    # проверяем nginx
 curl multitool-app-service:9002    # проверяем multitool
 ```
-
-![alt text](task1.4.png)
+![alt text](images/task1.4.png)
 
 ---
 
