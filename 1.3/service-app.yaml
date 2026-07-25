@@ -1,0 +1,17 @@
+# Service типа ClusterIP (Задание 1, п.4)
+# Обеспечивает доступ к репликам приложения multitool-app из других подов кластера
+apiVersion: v1
+kind: Service
+metadata:
+  name: multitool-app-service    # По этому имени сервис резолвится через DNS внутри кластера
+spec:
+  type: ClusterIP                 # Доступ только внутри кластера
+  selector:
+    app: multitool-app            # Выбирает поды из deployment-app.yaml
+  ports:
+    - name: nginx-port
+      port: 9001                  # Порт сервиса для nginx
+      targetPort: 80              # Порт контейнера nginx
+    - name: multitool-port
+      port: 9002                  # Порт сервиса для multitool
+      targetPort: 8080            # Порт контейнера multitool (исправленный)

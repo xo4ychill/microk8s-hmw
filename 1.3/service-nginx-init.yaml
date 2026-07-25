@@ -1,0 +1,14 @@
+# Service для Задания 2
+# Имя сервиса должно ТОЧНО совпадать с тем, что ищет init-контейнер
+# в deployment-nginx-init.yaml (nslookup nginx-init-service)
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-init-service       # Имя должно совпадать с командой nslookup в init-контейнере
+spec:
+  type: ClusterIP
+  selector:
+    app: nginx-init-app          # Выбирает поды из deployment-nginx-init.yaml
+  ports:
+    - port: 80
+      targetPort: 80

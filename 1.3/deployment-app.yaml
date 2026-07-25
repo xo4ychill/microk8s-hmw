@@ -1,0 +1,34 @@
+# =============================================================================
+# ФИНАЛЬНАЯ ВЕРСИЯ (Задание 1, п.1)
+# Исправление ошибки из deployment-app-broken.yaml:
+# контейнеру multitool явно задан HTTP_PORT=8080 и containerPort изменён
+# на 8080, чтобы он больше не конфликтовал с nginx (порт 80) в общем
+# сетевом пространстве Pod'а.
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multitool-app
+spec:
+  replicas: 1                    # Стартуем с 1 реплики — масштабируем до 2 отдельной командой (п.2)
+  selector:
+    matchLabels:
+      app: multitool-app         # Селектор Deployment -> поды
+  template:
+    metadata:
+      labels:
+        app: multitool-app       # Метка пода, по ней Service найдёт эти поды
+    spec:
+      containers:
+        - name: nginx              # Контейнер №1 — веб-сервер nginx
+          image: nginx
+          ports:
+            - containerPort: 80    # nginx слушает порт 80
+
+        - name: multitool           # Контейнер №2 — сетевой отладочный инструмент
+          image: wbitt/network-multitool
+          ports:
+            - containerPort: 8080   # ИСПРАВЛЕНИЕ: используем 8080, а не 80
+          env:
+            - name: HTTP_PORT        # ИСПРАВЛЕНИЕ: явно задаём порт для multitool,
+              value: "8080"          # чтобы избежать конфликта с nginx на порту 80

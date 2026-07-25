@@ -1,0 +1,16 @@
+# Отдельный Pod для проверки доступа до Service (Задание 1, п.5)
+# Внутри пода запущен multitool, из которого мы будем делать curl
+# к multitool-app-service, чтобы убедиться в доступности реплик приложения
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-client
+  labels:
+    role: test-client              # Метка исключительно для удобства поиска пода
+spec:
+  containers:
+    - name: multitool
+      image: wbitt/network-multitool
+      # Команда/curl выполняется вручную через kubectl exec (см. README),
+      # поэтому дополнительные env/ports для самого пода не обязательны —
+      # он используется только как источник curl-запросов

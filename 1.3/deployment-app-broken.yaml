@@ -1,0 +1,48 @@
+# =============================================================================
+# ШАГ 1 (ДЕМОНСТРАЦИЯ ОШИБКИ)
+#
+# СУТЬ ОШИБКИ:
+# Все контейнеры одного Pod'а в Kubernetes используют ОБЩЕЕ сетевое
+# пространство имён (общий localhost, общий набор портов на IP пода).
+# Контейнер nginx слушает порт 80.
+# Контейнер multitool (образ wbitt/network-multitool) по умолчанию,
+# если не задать переменную окружения HTTP_PORT, ТОЖЕ поднимает
+# встроенный веб-сервер на порту 80.
+# Два процесса в одном сетевом пространстве не могут забиндиться
+# на один и тот же порт -> контейнер multitool падает с ошибкой вида
+# "bind() to 0.0.0.0:80 failed (98: Address already in use)"
+# и уходит в CrashLoopBackOff.
+#
+# Как воспроизвести и увидеть ошибку:
+#   kubectl apply -f deployment-app-broken.yaml
+#   kubectl get pods -l app=multitool-app        # STATUS: CrashLoopBackOff
+#   kubectl logs <pod> -c multitool               # увидим "Address already in use"
+#
+# Исправление — см. deployment-app.yaml (финальная версия)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multitool-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: multitool-app
+  template:
+    metadata:
+      labels:
+        app: multitool-app
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+
+        - name: multitool
+          image: wbitt/network-multitool
+          ports:
+            - containerPort: 80
+          # переменная HTTP_PORT здесь НЕ задана —
+          # именно это приводит к конфликту портов с контейнером nginx
