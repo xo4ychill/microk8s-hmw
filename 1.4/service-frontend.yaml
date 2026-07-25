@@ -1,0 +1,13 @@
+# Service для frontend (Задание 2)
+# Внутрикластерный ClusterIP-сервис, к которому будет обращаться Ingress
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service        # Имя сервиса — на него ссылается Ingress в поле backend.service.name
+spec:
+  type: ClusterIP                # Доступ только внутри кластера, наружу выходим через Ingress
+  selector:
+    app: frontend                # Выбирает поды frontend Deployment
+  ports:
+    - port: 80                   # Порт Service (на него ссылается Ingress: port.number)
+      targetPort: 80             # Порт контейнера nginx

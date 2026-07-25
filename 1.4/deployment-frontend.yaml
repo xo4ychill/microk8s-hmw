@@ -1,0 +1,21 @@
+# Deployment для Задания 2 — frontend-приложение
+# Используется образ nginx как условная "фронтовая" часть
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 2                  # Две реплики для отказоустойчивости
+  selector:
+    matchLabels:
+      app: frontend             # Селектор для связи Deployment <-> поды
+  template:
+    metadata:
+      labels:
+        app: frontend           # Метка, по которой Service найдёт эти поды
+    spec:
+      containers:
+        - name: frontend
+          image: nginx
+          ports:
+            - containerPort: 80  # nginx слушает 80 порт внутри контейнера

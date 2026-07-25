@@ -1,0 +1,18 @@
+# Service типа ClusterIP для Задания 1
+# Даёт доступ к nginx и multitool ТОЛЬКО внутри кластера
+# (используется, например, из тестового пода через curl)
+apiVersion: v1
+kind: Service
+metadata:
+  name: multi-container-clusterip     # По этому имени сервис будет виден внутри кластера (DNS)
+spec:
+  type: ClusterIP                      # Тип по умолчанию — доступ только изнутри кластера
+  selector:
+    app: multi-container-app           # Выбирает поды с такой меткой (см. Deployment)
+  ports:
+    - name: nginx-port                 # Порт для доступа к nginx
+      port: 9001                       # Порт самого Service (то, что указываем в curl)
+      targetPort: 80                   # Порт контейнера nginx, куда идёт трафик
+    - name: multitool-port             # Порт для доступа к multitool
+      port: 9002                       # Порт самого Service
+      targetPort: 8080                 # Порт контейнера multitool, куда идёт трафик

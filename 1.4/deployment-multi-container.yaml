@@ -1,0 +1,30 @@
+# Deployment для Задания 1
+# Разворачивает под с двумя контейнерами: nginx и multitool
+# Реплики: 3 — для отказоустойчивости и проверки балансировки через Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-container-app        # Имя Deployment
+spec:
+  replicas: 3                      # Количество копий пода
+  selector:
+    matchLabels:
+      app: multi-container-app     # Селектор должен совпадать с labels пода ниже
+  template:
+    metadata:
+      labels:
+        app: multi-container-app   # Метка пода — по ней Service будет находить эти поды
+    spec:
+      containers:
+        - name: nginx               # Первый контейнер — веб-сервер nginx
+          image: nginx
+          ports:
+            - containerPort: 80     # Порт, который слушает nginx внутри контейнера
+
+        - name: multitool            # Второй контейнер — сетевой отладочный инструмент
+          image: wbitt/network-multitool
+          ports:
+            - containerPort: 8080   # Порт, который слушает multitool внутри контейнера
+          env:
+            - name: HTTP_PORT        # Переменная окружения обязательна для multitool
+              value: "8080"          # Значение должно совпадать с containerPort выше

@@ -1,0 +1,37 @@
+# Ingress для Задания 2
+# Маршрутизирует внешний трафик на два разных Service по пути URL:
+#   /      -> frontend-service
+#   /api   -> backend-service
+#
+# ВАЖНО: аннотация rewrite-target: "/" переписывает ЛЮБОЙ совпавший путь на "/"
+# перед отправкой на backend-сервис. Это означает, что запрос на /api дойдёт
+# до backend-service уже как "/", а не как "/api". Для multitool это не критично
+# (он отвечает на любой путь одинаково), но для реального REST API с роутингом
+# по пути потребовалась бы capture-группа, например:
+#   path: /api(/|$)(.*)
+#   rewrite-target: /$2
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /   # Правило переписывания пути (см. примечание выше)
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /                     # Корневой путь -> frontend
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service   # Имя Service из service-frontend.yaml
+                port:
+                  number: 80
+
+          - path: /api                  # Путь /api -> backend
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-service    # Имя Service из service-backend.yaml
+                port:
+                  number: 80

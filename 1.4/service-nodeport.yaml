@@ -1,0 +1,15 @@
+# Service типа NodePort для Задания 1
+# Открывает доступ к nginx СНАРУЖИ кластера через порт узла (node)
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-nodeport
+spec:
+  type: NodePort                 # Тип, который пробрасывает порт на все ноды кластера
+  selector:
+    app: multi-container-app     # Те же поды, что и в ClusterIP-сервисе (nginx внутри них)
+  ports:
+    - port: 80                   # Порт Service внутри кластера
+      targetPort: 80             # Порт контейнера nginx
+      nodePort: 30080             # Порт на самой ноде (диапазон 30000-32767)
+                                   # Доступ снаружи: curl <node-ip>:30080

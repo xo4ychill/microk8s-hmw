@@ -1,0 +1,24 @@
+# Deployment для Задания 2 — backend-приложение
+# Используется образ wbitt/network-multitool как условный "API" сервис
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 2                     # Две реплики для отказоустойчивости
+  selector:
+    matchLabels:
+      app: backend                 # Селектор для связи Deployment <-> поды
+  template:
+    metadata:
+      labels:
+        app: backend                # Метка, по которой Service найдёт эти поды
+    spec:
+      containers:
+        - name: backend
+          image: wbitt/network-multitool
+          ports:
+            - containerPort: 8080   # multitool слушает 8080 порт внутри контейнера
+          env:
+            - name: HTTP_PORT        # Обязательная переменная окружения для multitool
+              value: "8080"          # Должна совпадать с containerPort

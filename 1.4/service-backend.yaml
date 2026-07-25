@@ -1,0 +1,13 @@
+# Service для backend (Задание 2)
+# Внутрикластерный ClusterIP-сервис, к которому будет обращаться Ingress по пути /api
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service         # Имя сервиса — на него ссылается Ingress в поле backend.service.name
+spec:
+  type: ClusterIP                # Доступ только внутри кластера
+  selector:
+    app: backend                 # Выбирает поды backend Deployment
+  ports:
+    - port: 80                   # Порт Service (на него ссылается Ingress: port.number)
+      targetPort: 8080           # Порт контейнера multitool
