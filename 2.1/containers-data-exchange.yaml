@@ -1,0 +1,47 @@
+# Задание 1: обмен данными между контейнерами одного Pod'а
+# Контейнер busybox каждые 5 секунд дописывает текущую дату в общий файл.
+# Контейнер multitool читает этот файл в режиме "tail -f" (постоянный мониторинг).
+# Общий файл лежит на emptyDir — эфемерном томе, который существует
+# только пока жив Pod, и общем для ВСЕХ контейнеров этого Pod'а.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-exchange
+spec:
+  replicas: 1                     # Достаточно одной реплики для демонстрации обмена данными
+  selector:
+    matchLabels:
+      app: data-exchange          # Селектор Deployment -> поды
+  template:
+    metadata:
+      labels:
+        app: data-exchange        # Метка пода
+    spec:
+      containers:
+        - name: writer              # Контейнер №1 — пишет данные
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          # Бесконечный цикл: каждые 5 секунд перезаписываем файл текущей датой.
+          args:
+            - |
+              while true; do
+                echo "$(date)" >> /data/shared.log;
+                sleep 5;
+              done
+          volumeMounts:
+            - name: shared-data     # Имя тома — совпадает с volumes ниже
+              mountPath: /data       # Путь монтирования внутри контейнера writer
+
+        - name: reader               # Контейнер №2 — читает данные (multitool)
+          image: wbitt/network-multitool
+          command: ["/bin/sh", "-c"]
+          args:
+            - "tail -f /data/shared.log"   # Непрерывно выводит новые строки файла
+          volumeMounts:
+            - name: shared-data      # То же имя тома — контейнеры видят один и тот же файл
+              mountPath: /data        # Путь монтирования внутри контейнера reader
+
+      volumes:
+        - name: shared-data          # Имя эфемерного тома уровня Pod'а
+          emptyDir: {}                # emptyDir — общее хранилище для контейнеров ОДНОГО пода,
+                                       # удаляется вместе с подом

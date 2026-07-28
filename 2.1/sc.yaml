@@ -1,0 +1,97 @@
+# Задание 3: StorageClass + PVC
+# StorageClass с provisioner: kubernetes.io/no-provisioner НЕ создаёт диск
+# автоматически — он лишь описывает "класс" хранилища и политику связывания.
+# Реальное хранилище для этого класса всё равно нужно подготовить вручную
+# через PersistentVolume с соответствующим storageClassName (аналогично
+# ручному PV из Задания 2). Поэтому ниже, помимо SC/PVC/Deployment из
+# шаблона задания, добавлен PV — без него PVC с volumeBindingMode:
+# WaitForFirstConsumer никогда не перейдёт в Bound и вечно останется Pending.
+#
+# ВАЖНО: перед применением манифеста на ноде кластера должна существовать
+# директория из hostPath.path:
+#   sudo mkdir -p /mnt/data/k8s-homework/pv-sc
+#   sudo chmod 777 /mnt/data/k8s-homework/pv-sc
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-manual-sc                 # Имя StorageClass — на него ссылаются PV и PVC ниже
+provisioner: kubernetes.io/no-provisioner  # Нет автоматического развёртывания дисков
+volumeBindingMode: WaitForFirstConsumer    # PVC будет привязан к PV только в момент планирования пода
+                                            # (а не сразу при создании PVC) — это важно для локальных
+                                            # хранилищ, привязанных к конкретной ноде
+
+---
+# PV подготовлен вручную, чтобы StorageClass было к чему привязывать PVC
+# (сам no-provisioner ничего не создаёт автоматически)
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: sc-backed-pv
+spec:
+  capacity:
+    storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-manual-sc      # КЛЮЧЕВОЕ: связывает PV именно с этим StorageClass
+  hostPath:
+    path: /mnt/data/k8s-homework/pv-sc   # Директория на ноде кластера (должна существовать заранее)
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sc-pvc
+spec:
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi                       # <= объёма PV
+  storageClassName: local-manual-sc      # Должно совпадать с именем StorageClass выше
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-exchange-sc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-exchange-sc
+  template:
+    metadata:
+      labels:
+        app: data-exchange-sc
+    spec:
+      containers:
+        - name: writer
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                echo "$(date)" >> /data/shared.log;
+                sleep 5;
+              done
+          volumeMounts:
+            - name: shared-data
+              mountPath: /data
+
+        - name: reader
+          image: wbitt/network-multitool
+          command: ["/bin/sh", "-c"]
+          args:
+            - "tail -f /data/shared.log"
+          volumeMounts:
+            - name: shared-data
+              mountPath: /data
+
+      volumes:
+        - name: shared-data
+          persistentVolumeClaim:
+            claimName: sc-pvc              # Ссылка на PVC, объявленный выше

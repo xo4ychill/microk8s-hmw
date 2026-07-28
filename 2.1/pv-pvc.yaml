@@ -1,0 +1,80 @@
+# Задание 2: PersistentVolume + PersistentVolumeClaim
+# В отличие от Задания 1 (emptyDir, живёт только с подом), здесь данные
+# хранятся в директории НА НОДЕ (hostPath) и переживают удаление Deployment/Pod.
+#
+# ВАЖНО: перед применением манифеста на ноде кластера должна существовать
+# директория из hostPath.path, иначе PV не сможет примонтировать её:
+#   sudo mkdir -p /mnt/data/k8s-homework/pv-manual
+#   sudo chmod 777 /mnt/data/k8s-homework/pv-manual   # для простоты прав доступа в учебном стенде
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: manual-pv                        # Имя PV, на него ссылается PVC ниже через volumeName
+spec:
+  capacity:
+    storage: 1Gi                          # Заявленный объём хранилища
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce                        # Может быть смонтирован на чтение-запись одной нодой одновременно
+  persistentVolumeReclaimPolicy: Retain    # ВАЖНО: Retain — при удалении PVC сам PV и данные на диске СОХРАНЯЮТСЯ
+                                            # (см. README, разбор поведения в шагах 4-5 Задания 2)
+  hostPath:
+    path: /mnt/data/k8s-homework/pv-manual # Директория на ноде кластера (должна существовать заранее)
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: manual-pvc                        # Имя PVC, на него ссылается Deployment через claimName
+spec:
+  volumeName: manual-pv                    # Явно указываем, к какому PV привязать claim (статическое связывание)
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce                         # Должно совпадать с accessModes у PV
+  resources:
+    requests:
+      storage: 1Gi                          # Запрашиваемый объём <= объёма PV
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-exchange-pvc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-exchange-pvc
+  template:
+    metadata:
+      labels:
+        app: data-exchange-pvc
+    spec:
+      containers:
+        - name: writer
+          image: busybox
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              while true; do
+                echo "$(date)" >> /data/shared.log;
+                sleep 5;
+              done
+          volumeMounts:
+            - name: shared-data           # Имя тома — совпадает с volumes ниже
+              mountPath: /data
+
+        - name: reader
+          image: wbitt/network-multitool
+          command: ["/bin/sh", "-c"]
+          args:
+            - "tail -f /data/shared.log"
+          volumeMounts:
+            - name: shared-data
+              mountPath: /data
+
+      volumes:
+        - name: shared-data
+          persistentVolumeClaim:
+            claimName: manual-pvc          # Ссылка на PVC, объявленный выше
