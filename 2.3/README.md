@@ -178,7 +178,7 @@ kubectl describe pod <имя-любого-пода> --as=developer
 ![alt text](images/task3.4.png)
 ![alt text](images/task3.4.1.png)
 
-Дмонстрация того, что права **ограничены**:
+Демонстрация того, что права **ограничены**:
 ```bash
 # Запрещено: удаление подов (нет verb "delete" в Role)
 kubectl delete pod <имя-любого-пода> --as=developer
