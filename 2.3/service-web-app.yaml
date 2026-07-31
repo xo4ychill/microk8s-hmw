@@ -1,0 +1,14 @@
+# Service для приложения web-app (Задание 2)
+# Явно не указан в списке манифестов задания, но необходим:
+# Ingress не может маршрутизировать трафик напрямую в под, только через Service.
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-app-service
+spec:
+  type: ClusterIP
+  selector:
+    app: web-app          # Выбирает поды из deployment.yaml (Задание 1)
+  ports:
+    - port: 80
+      targetPort: 80        # Порт контейнера nginx

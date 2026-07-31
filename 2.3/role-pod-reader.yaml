@@ -1,0 +1,32 @@
+# Role для просмотра подов и их логов (Задание 3)
+#
+# ВАЖНЫЙ НЮАНС: в шаблоне задания в списке verbs присутствует "describe" —
+# это НЕ валидный RBAC-verb. "describe" — команда клиента kubectl, а не
+# действие API-сервера; под капотом `kubectl describe pod` на самом деле
+# делает несколько РЕАЛЬНЫХ запросов: get конкретного пода + list событий
+# (Events) в неймспейсе, связанных с этим подом. Поэтому вместо
+# несуществующего verb "describe" здесь добавлено правило на ресурс
+# "events", без которого `kubectl describe pod --as=developer` не покажет
+# раздел Events (хотя базовая информация о поде всё равно отобразится).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-viewer
+  namespace: default            # Role действует только в этом namespace
+rules:
+  - apiGroups: [""]              # "" — core API group
+    resources:
+      - pods                     # Просмотр подов
+      - pods/log                 # Просмотр логов подов
+    verbs:
+      - get
+      - list
+      - watch
+
+  - apiGroups: [""]
+    resources:
+      - events                   # Нужно для полноценной работы `kubectl describe pod`
+    verbs:
+      - get
+      - list
+      - watch

@@ -1,0 +1,19 @@
+# ConfigMap с содержимым веб-страницы (Задание 1)
+# Ключ index.html станет отдельным файлом при монтировании ConfigMap как volume
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-content
+  namespace: default
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Страница из ConfigMap для ДЗ «Настройка приложений и управление доступом в Kubernetes»</title>
+    </head>
+    <body>
+      <h1>Привет от Kubernetes!</h1>
+      <p>Эта страница отдаётся контейнером nginx, содержимое которой подключено через ConfigMap.</p>
+    </body>
+    </html>

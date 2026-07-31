@@ -1,0 +1,15 @@
+# RoleBinding для пользователя developer (Задание 3)
+# Связывает Role pod-viewer с пользователем developer в namespace default
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: developer-pod-viewer-binding
+  namespace: default              # Должен совпадать с namespace у Role
+subjects:
+  - kind: User
+    name: developer                # Имя пользователя = CN сертификата (см. openssl-команду в README)
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: pod-viewer                 # Имя Role из role-pod-reader.yaml
+  apiGroup: rbac.authorization.k8s.io

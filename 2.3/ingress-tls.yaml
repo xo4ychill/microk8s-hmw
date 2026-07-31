@@ -1,0 +1,24 @@
+# Ingress с HTTPS (Задание 2)
+# Терминирует TLS с помощью сертификата из tls-secret и проксирует
+# трафик на web-app-service (то же приложение из Задания 1).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-app-ingress-tls
+spec:
+  ingressClassName: public          # Класс ingress-контроллера в MicroK8S (см. `kubectl get ingressclass`)
+  tls:
+    - hosts:
+        - myapp.example.com          # Должно совпадать с CN сертификата (см. openssl-команду в README)
+      secretName: tls-secret          # Имя Secret из secret-tls.yaml
+  rules:
+    - host: myapp.example.com         # Правило применяется только к запросам с этим Host
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-app-service  # Service из service-web-app.yaml
+                port:
+                  number: 80

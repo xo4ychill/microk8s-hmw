@@ -1,0 +1,49 @@
+# Deployment для Задания 1 (nginx + multitool)
+#
+# ВАЖНЫЙ НЮАНС ("проблема конфигурации", которую нужно решить по условию задания):
+# В шаблоне задания ConfigMap с index.html монтируется в /etc/nginx/conf.d —
+# это директория для .conf-файлов (описывающих server-блоки nginx), а не для
+# статического HTML-контента! nginx по умолчанию подключает из conf.d только
+# файлы с расширением *.conf (см. "include /etc/nginx/conf.d/*.conf;" в
+# /etc/nginx/nginx.conf), поэтому index.html просто не заработает как
+# страница — там нужен именно ДОКУМЕНТ-РУТ nginx: /usr/share/nginx/html.
+# Ниже — исправленный путь монтирования.
+#
+# Второй нюанс: у multitool нужно явно
+# задать HTTP_PORT, отличный от 80, иначе он конфликтует с портом nginx
+# в общем сетевом пространстве Pod'а.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /usr/share/nginx/html   # ИСПРАВЛЕНО: докумен-рут nginx, а не conf.d
+
+        - name: multitool
+          image: wbitt/network-multitool
+          ports:
+            - containerPort: 8080
+          env:
+            - name: HTTP_PORT                     # Чтобы не конфликтовать с nginx на порту 80
+              value: "8080"
+
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: web-content                     # Имя ConfigMap из configmap-web.yaml
