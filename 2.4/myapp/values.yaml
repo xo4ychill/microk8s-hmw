@@ -1,0 +1,21 @@
+# Значения по умолчанию для чарта myapp.
+# Переопределяются через -f values-*.yaml или --set при helm install/upgrade.
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: nginx
+    tag: "1.25"          # КЛЮЧЕВОЕ ЗНАЧЕНИЕ: именно эта переменная меняется между версиями (Задание 1, п.3)
+  service:
+    port: 80
+    targetPort: 80
+
+backend:
+  replicaCount: 1
+  image:
+    repository: wbitt/network-multitool
+    tag: "latest"
+  httpPort: 8080          # Порт, на котором multitool поднимает свой веб-сервер (через env HTTP_PORT)
+  service:
+    port: 9002
+    targetPort: 8080

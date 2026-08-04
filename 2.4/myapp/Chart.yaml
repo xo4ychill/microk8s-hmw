@@ -1,0 +1,10 @@
+apiVersion: v2
+name: myapp
+description: >-
+  Учебный Helm-чарт для ДЗ по Helm. Приложение состоит из двух компонентов
+  (каждый — отдельный Deployment): frontend (nginx) и backend (multitool).
+  Версия frontend-образа управляется через values (image.tag), что позволяет
+  запускать несколько версий приложения одновременно в разных релизах/неймспейсах.
+type: application
+version: 0.1.0        # Версия САМОГО ЧАРТА (структуры манифестов)
+appVersion: "1.0.0"   # Версия ПРИЛОЖЕНИЯ по умолчанию (справочно, реальная версия — из values.frontend.image.tag)

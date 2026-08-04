@@ -1,0 +1,4 @@
+# Версия 1 приложения — для первого релиза в namespace=app1
+frontend:
+  image:
+    tag: "1.25"

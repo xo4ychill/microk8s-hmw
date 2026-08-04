@@ -1,0 +1,22 @@
+# Service для компонента frontend (nginx).
+# Отдельный Service на каждый компонент — так же, как и Deployment,
+# чтобы к frontend и backend можно было обращаться независимо друг от друга
+# по собственному стабильному DNS-имени внутри кластера.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "myapp.fullname" . }}-frontend
+  labels:
+    {{- include "myapp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  type: ClusterIP                                    # Доступ только внутри кластера (наружу — через port-forward/Ingress)
+  selector:
+    # ВАЖНО: селектор должен ТОЧНО совпадать с лейблами пода в deployment-frontend.yaml
+    # (app.kubernetes.io/instance + app.kubernetes.io/component), иначе Service
+    # не найдёт под и Endpoints останутся пустыми.
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: frontend
+  ports:
+    - port: {{ .Values.frontend.service.port }}         # Порт, на котором Service доступен внутри кластера
+      targetPort: {{ .Values.frontend.service.targetPort }}  # Порт контейнера nginx, куда реально идёт трафик

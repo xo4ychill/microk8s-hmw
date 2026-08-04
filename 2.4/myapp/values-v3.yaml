@@ -1,0 +1,4 @@
+# Версия 3 приложения — для релиза в namespace=app2
+frontend:
+  image:
+    tag: "1.26"

@@ -1,0 +1,20 @@
+# Service для компонента backend (multitool).
+# Через этот Service, например, frontend или другие поды кластера могли бы
+# обращаться к multitool по имени backend-service, не зная его реального Pod IP
+# (Pod IP меняется при каждом пересоздании пода, ClusterIP Service — стабилен).
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "myapp.fullname" . }}-backend
+  labels:
+    {{- include "myapp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP                                   # Доступ только внутри кластера
+  selector:
+    # Должен совпадать с лейблами пода в deployment-backend.yaml
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: backend
+  ports:
+    - port: {{ .Values.backend.service.port }}         # Порт, на котором Service доступен внутри кластера
+      targetPort: {{ .Values.backend.service.targetPort }}  # Порт контейнера multitool (HTTP_PORT из deployment-backend.yaml)
