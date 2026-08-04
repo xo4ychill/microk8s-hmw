@@ -36,6 +36,8 @@ myapp/
 
 Каждый компонент приложения (`frontend`, `backend`) — отдельный `Deployment` со своим `Service`, как того требует задание. Версия приложения (тег образа `nginx`) — параметризована через `values.frontend.image.tag` (Задание 1, п.3).
 
+
+
 ### Шаг 1. Проверить чарт линтером
 
 ```bash
@@ -171,6 +173,7 @@ helm history app1-v1 -n app1
 
 ## Манифесты чарта
 
+
 <details>
 <summary><code>Chart.yaml</code></summary>
 
@@ -183,8 +186,9 @@ description: >-
   Версия frontend-образа управляется через values (image.tag), что позволяет
   запускать несколько версий приложения одновременно в разных релизах/неймспейсах.
 type: application
-version: 0.1.0
-appVersion: "1.0.0"
+version: 0.1.0        # Версия САМОГО ЧАРТА (структуры манифестов)
+appVersion: "1.0.0"   # Версия ПРИЛОЖЕНИЯ по умолчанию (справочно, реальная версия — из values.frontend.image.tag)
+
 ```
 </details>
 
@@ -192,11 +196,14 @@ appVersion: "1.0.0"
 <summary><code>values.yaml</code></summary>
 
 ```yaml
+# Значения по умолчанию для чарта myapp.
+# Переопределяются через -f values-*.yaml или --set при helm install/upgrade.
+
 frontend:
   replicaCount: 1
   image:
     repository: nginx
-    tag: "1.25"
+    tag: "1.25"          # КЛЮЧЕВОЕ ЗНАЧЕНИЕ: именно эта переменная меняется между версиями (Задание 1, п.3)
   service:
     port: 80
     targetPort: 80
@@ -206,10 +213,11 @@ backend:
   image:
     repository: wbitt/network-multitool
     tag: "latest"
-  httpPort: 8080
+  httpPort: 8080          # Порт, на котором multitool поднимает свой веб-сервер (через env HTTP_PORT)
   service:
     port: 9002
     targetPort: 8080
+
 ```
 </details>
 
@@ -240,15 +248,26 @@ frontend:
 <summary><code>templates/_helpers.tpl</code></summary>
 
 ```yaml
+{{/*
+Базовое имя ресурсов — берём имя релиза (уникально для каждой установки чарта:
+helm install app1-v1 ..., helm install app1-v2 ..., helm install app2-v1 ...).
+Благодаря этому несколько релизов чарта не конфликтуют по именам ресурсов
+даже в одном namespace (Задание 2).
+*/}}
 {{- define "myapp.fullname" -}}
 {{- .Release.Name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
+{{/*
+Общие лейблы.
+Используются на всех ресурсах чарта.
+*/}}
 {{- define "myapp.labels" -}}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 {{- end -}}
+
 ```
 </details>
 
@@ -256,37 +275,7 @@ helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 <summary><code>templates/deployment-frontend.yaml</code></summary>
 
 ```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ include "myapp.fullname" . }}-frontend
-  labels:
-    {{- include "myapp.labels" . | nindent 4 }}
-    app.kubernetes.io/component: frontend
-spec:
-  replicas: {{ .Values.frontend.replicaCount }}
-  selector:
-    matchLabels:
-      app.kubernetes.io/instance: {{ .Release.Name }}
-      app.kubernetes.io/component: frontend
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/instance: {{ .Release.Name }}
-        app.kubernetes.io/component: frontend
-    spec:
-      containers:
-        - name: nginx
-          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
-          ports:
-            - containerPort: {{ .Values.frontend.service.targetPort }}
-```
-</details>
-
-<details>
-<summary><code>templates/deployment-backend.yaml</code></summary>
-
-```yaml
+# Компонент №2: backend (multitool). Отдельный Deployment.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -312,8 +301,53 @@ spec:
           ports:
             - containerPort: {{ .Values.backend.httpPort }}
           env:
+            # HTTP_PORT обязателен для multitool, иначе он поднимет свой веб-сервер
+            # на порту 80 и, если бы был в одном поде с nginx, конфликтовал бы с ним.
+            # Здесь компоненты в разных подах, но переменную
+            # оставляем явной для ясности, на случай будущего изменения архитектуры.
             - name: HTTP_PORT
               value: "{{ .Values.backend.httpPort }}"
+
+```
+</details>
+
+<details>
+<summary><code>templates/deployment-backend.yaml</code></summary>
+
+```yaml
+# Компонент №2: backend (multitool). Отдельный Deployment.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "myapp.fullname" . }}-backend
+  labels:
+    {{- include "myapp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: multitool
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.backend.httpPort }}
+          env:
+            # HTTP_PORT обязателен для multitool, иначе он поднимет свой веб-сервер
+            # на порту 80 и, если бы был в одном поде с nginx, конфликтовал бы с ним.
+            # Здесь компоненты в разных подах, но переменную
+            # оставляем явной для ясности, на случай будущего изменения архитектуры.
+            - name: HTTP_PORT
+              value: "{{ .Values.backend.httpPort }}"
+
 ```
 </details>
 
@@ -321,6 +355,10 @@ spec:
 <summary><code>templates/service-frontend.yaml</code></summary>
 
 ```yaml
+# Service для компонента frontend (nginx).
+# Отдельный Service на каждый компонент — так же, как и Deployment,
+# чтобы к frontend и backend можно было обращаться независимо друг от друга
+# по собственному стабильному DNS-имени внутри кластера.
 apiVersion: v1
 kind: Service
 metadata:
@@ -329,13 +367,17 @@ metadata:
     {{- include "myapp.labels" . | nindent 4 }}
     app.kubernetes.io/component: frontend
 spec:
-  type: ClusterIP
+  type: ClusterIP                                    # Доступ только внутри кластера (наружу — через port-forward/Ingress)
   selector:
+    # ВАЖНО: селектор должен ТОЧНО совпадать с лейблами пода в deployment-frontend.yaml
+    # (app.kubernetes.io/instance + app.kubernetes.io/component), иначе Service
+    # не найдёт под и Endpoints останутся пустыми.
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: frontend
   ports:
-    - port: {{ .Values.frontend.service.port }}
-      targetPort: {{ .Values.frontend.service.targetPort }}
+    - port: {{ .Values.frontend.service.port }}         # Порт, на котором Service доступен внутри кластера
+      targetPort: {{ .Values.frontend.service.targetPort }}  # Порт контейнера nginx, куда реально идёт трафик
+
 ```
 </details>
 
@@ -343,6 +385,10 @@ spec:
 <summary><code>templates/service-backend.yaml</code></summary>
 
 ```yaml
+# Service для компонента backend (multitool).
+# Через этот Service, например, frontend или другие поды кластера могли бы
+# обращаться к multitool по имени backend-service, не зная его реального Pod IP
+# (Pod IP меняется при каждом пересоздании пода, ClusterIP Service — стабилен).
 apiVersion: v1
 kind: Service
 metadata:
@@ -351,15 +397,18 @@ metadata:
     {{- include "myapp.labels" . | nindent 4 }}
     app.kubernetes.io/component: backend
 spec:
-  type: ClusterIP
+  type: ClusterIP                                   # Доступ только внутри кластера
   selector:
+    # Должен совпадать с лейблами пода в deployment-backend.yaml
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/component: backend
   ports:
-    - port: {{ .Values.backend.service.port }}
-      targetPort: {{ .Values.backend.service.targetPort }}
+    - port: {{ .Values.backend.service.port }}         # Порт, на котором Service доступен внутри кластера
+      targetPort: {{ .Values.backend.service.targetPort }}  # Порт контейнера multitool (HTTP_PORT из deployment-backend.yaml)
+
 ```
 </details>
+
 
 ---
 
